@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Miner - Galactic Energy Extraction</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
+        
+        .header {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+        
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        
+        .title {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle { color: #94a3b8; font-size: 0.875rem; letter-spacing: 0.1em; margin-top: 0.5rem; }
+        
+        .stats {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(59, 130, 246, 0.1));
+            border: 2px solid rgba(6, 182, 212, 0.3);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: right;
+        }
+        
+        .energy-display { font-size: 2.5rem; font-weight: 900; color: #06b6d4; }
+        .cps-display { color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        @media (min-width: 1024px) { .grid { grid-template-columns: 1fr 1fr 1fr; } }
+        
+        .card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+        }
+        
+        .card-purple { border-color: rgba(168, 85, 247, 0.3); box-shadow: 0 0 20px rgba(168, 85, 247, 0.3); }
+        
+        .power-core-container { position: relative; height: 320px; margin-bottom: 1.5rem; }
+        
+        .power-core {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin: 20px auto;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .power-core:hover { transform: scale(1.05); }
+        .power-core:active { transform: scale(0.95); }
+        
+        .core-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid;
+            animation: pulse-ring 2s ease-in-out infinite;
+        }
+        
+        .core-ring:nth-child(1) { inset: 0; border-color: rgba(6, 182, 212, 0.6); }
+        .core-ring:nth-child(2) { inset: 10px; border-color: rgba(59, 130, 246, 0.5); animation-delay: 0.5s; }
+        .core-ring:nth-child(3) { inset: 20px; border-color: rgba(168, 85, 247, 0.4); animation-delay: 1s; }
+        
+        .core-center {
+            position: absolute;
+            inset: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6, #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 60px rgba(6, 182, 212, 0.8), inset 0 0 60px rgba(168, 85, 247, 0.4);
+        }
+        
+        @keyframes pulse-ring {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.5; }
+        }
+        
+        .click-animation {
+            position: absolute;
+            pointer-events: none;
+            font-weight: bold;
+            font-size: 2rem;
+            color: #06b6d4;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+            animation: float-up 1s ease-out forwards;
+        }
+        
+        @keyframes float-up {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #06b6d4;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-explode 1s ease-out forwards;
+        }
+        
+        @keyframes particle-explode {
+            0% { opacity: 1; transform: translate(0, 0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0); }
+        }
+        
+        .core-info { text-align: center; }
+        .core-label { color: #94a3b8; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+        .core-value { font-size: 1.5rem; font-weight: bold; color: #06b6d4; }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+        }
+        
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0891b2, #2563eb);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(6, 182, 212, 0.4);
+        }
+        
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .btn-success:hover:not(:disabled) { transform: scale(1.05); }
+        
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .btn-danger:hover:not(:disabled) { transform: scale(1.05); }
+        
+        .btn-secondary { background: #475569; color: white; }
+        .btn-secondary:hover:not(:disabled) { background: #334155; }
+        
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .tab { flex: 1; }
+        
+        .list { max-height: 650px; overflow-y: auto; }
+        .list::-webkit-scrollbar { width: 8px; }
+        .list::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+        .list::-webkit-scrollbar-thumb { background: rgba(6, 182, 212, 0.5); border-radius: 4px; }
+        .list::-webkit-scrollbar-thumb:hover { background: rgba(6, 182, 212, 0.7); }
+        
+        .list-item {
+            margin-bottom: 0.5rem;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .list-item:not(.disabled):hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(6, 182, 212, 0.3); }
+        
+        .list-item-available { background: rgba(51, 65, 85, 0.5); border-color: rgba(6, 182, 212, 0.5); }
+        .list-item-disabled { background: rgba(30, 41, 59, 0.3); border-color: rgba(71, 85, 105, 0.5); opacity: 0.5; cursor: not-allowed; }
+        .list-item-owned { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.5); }
+        .list-item-upgrade { border-color: rgba(168, 85, 247, 0.5); }
+        
+        .item-content { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .item-icon { font-size: 2.5rem; }
+        .item-info { flex: 1; text-align: left; }
+        .item-name { font-weight: bold; font-size: 0.875rem; margin-bottom: 0.25rem; }
+        .item-desc { font-size: 0.75rem; color: #94a3b8; }
+        .item-stats { font-size: 0.75rem; color: #06b6d4; margin-top: 0.25rem; }
+        .item-cost { text-align: right; }
+        .cost-value { font-size: 0.875rem; font-weight: bold; color: #06b6d4; }
+        .cost-label { font-size: 0.75rem; color: #94a3b8; }
+        
+        .bank-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+        .bank-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.5rem;
+            background: rgba(168, 85, 247, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .bank-title { font-size: 1.25rem; font-weight: bold; color: #a855f7; }
+        .bank-stat { background: rgba(88, 28, 135, 0.2); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem; }
+        .bank-stat-label { font-size: 0.75rem; color: #94a3b8; }
+        .bank-stat-value { font-size: 1.5rem; font-weight: bold; color: #c084fc; }
+        .bank-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        
+        .stock-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid rgba(6, 182, 212, 0.3);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .stock-card:hover { 
+            border-color: rgba(6, 182, 212, 0.6); 
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .stock-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .stock-name { font-weight: bold; font-size: 1rem; color: #e2e8f0; }
+        .stock-owned { font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; }
+        .stock-price { font-weight: 900; font-size: 1.5rem; text-align: right; }
+        .stock-trend { font-size: 0.875rem; text-align: right; margin-top: 0.25rem; font-weight: bold; }
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+        
+        .stock-chart { 
+            height: 150px; 
+            margin-bottom: 1rem;
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.6));
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            position: relative;
+        }
+        
+        .stock-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+        
+        .save-section {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .save-title { 
+            font-size: 1.25rem; 
+            font-weight: bold; 
+            color: #a855f7; 
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .save-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+        .save-input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 0.5rem;
+            color: white;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            resize: vertical;
+            min-height: 100px;
+        }
+        .save-info { font-size: 0.875rem; color: #94a3b8; margin-top: 0.75rem; text-align: center; }
+        
+        .hidden { display: none; }
+        
+        @media (max-width: 768px) {
+            .title { font-size: 2rem; }
+            .grid { grid-template-columns: 1fr; }
+            .header-content { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <div>
+                    <h1 class="title">NEXUS MINER</h1>
+                    <p class="subtitle">⚡ GALACTIC ENERGY EXTRACTION SYSTEM ⚡</p>
+                </div>
+                <div class="stats">
+                    <div class="energy-display" id="energyDisplay">0 J</div>
+                    <div class="cps-display"><span style="color: #10b981;">+</span><span id="cpsDisplay">0</span> J/s</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <div class="card">
+                    <div class="power-core-container">
+                        <div class="power-core" id="powerCore">
+                            <div class="core-ring"></div>
+                            <div class="core-ring"></div>
+                            <div class="core-ring"></div>
+                            <div class="core-center">
+                                <svg style="width: 6rem; height: 6rem; color: white; filter: drop-shadow(0 0 20px rgba(255,255,255,0.5));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="clickContainer" style="position: absolute; inset: 0; pointer-events: none;"></div>
+                    </div>
+                    
+                    <div class="core-info">
+                        <p class="core-label">⚡ Power Core</p>
+                        <p class="core-value">+<span id="clickPowerDisplay">1</span> J per click</p>
+                        <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">🖱️ <span id="totalClicksDisplay">0</span> total clicks</p>
+                    </div>
+                </div>
+
+                <div class="card card-purple" style="margin-top: 1rem;">
+                    <div class="bank-header">
+                        <div class="bank-icon">💎</div>
+                        <h3 class="bank-title">ENERGY BANK</h3>
+                    </div>
+                    <div class="bank-stat">
+                        <div class="bank-stat-label">Balance</div>
+                        <div class="bank-stat-value" id="bankBalanceDisplay">0 J</div>
+                    </div>
+                    <div class="bank-stat">
+                        <div class="bank-stat-label">Interest Rate</div>
+                        <div class="bank-stat-value" style="color: #10b981;" id="interestRateDisplay">0.10%/s</div>
+                    </div>
+                    <div class="bank-buttons">
+                        <button onclick="depositToBank()" class="btn btn-success">Deposit All</button>
+                        <button onclick="withdrawFromBank()" class="btn btn-danger">Withdraw</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <div class="tabs">
+                        <button onclick="switchTab('buildings')" id="buildingsTab" class="btn btn-primary tab">🏗️ Buildings</button>
+                        <button onclick="switchTab('upgrades')" id="upgradesTab" class="btn btn-secondary tab">⚙️ Upgrades</button>
+                    </div>
+                    <div id="buildingsContainer" class="list"></div>
+                    <div id="upgradesContainer" class="list hidden"></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <div class="bank-header">
+                        <div class="bank-icon" style="background: rgba(6, 182, 212, 0.2);">📈</div>
+                        <h3 class="bank-title" style="color: #06b6d4;">GALACTIC EXCHANGE</h3>
+                    </div>
+                    <div id="stocksContainer" class="list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="save-section">
+            <div class="save-title">
+                <span>💾</span>
+                <span>SAVE & LOAD SYSTEM</span>
+            </div>
+            <div class="save-buttons">
+                <button onclick="exportSave()" class="btn btn-primary">📤 Export Code</button>
+                <button onclick="importSave()" class="btn btn-secondary">📥 Import Code</button>
+                <button onclick="hardReset()" class="btn btn-danger">🔄 Reset Game</button>
+            </div>
+            <textarea id="saveCode" class="save-input" placeholder="Dein Spielstand-Code erscheint hier... Kopiere ihn zum Sichern oder füge einen Code ein zum Laden."></textarea>
+            <div class="save-info">💡 Auto-Save alle 30 Sekunden | Exportiere deinen Code regelmäßig als Backup!</div>
+        </div>
+    </div>
+
+    <script>
+        let isInitialized = false;
+        let gameState = {
+            energy: 0,
+            totalClicks: 0,
+            buildings: {},
+            upgrades: {},
+            bankBalance: 0,
+            stocks: {},
+            portfolio: {},
+            stockHistory: {}
+        };
+
+        const BUILDINGS = [
+            { id: 'nanobots', name: 'Nano-Bots', desc: 'Mikroskopische Energiesammler', baseCost: 15, cps: 0.1, icon: '🤖' },
+            { id: 'solarpanel', name: 'Solar-Panel', desc: 'Solarenergie-Konverter', baseCost: 100, cps: 1, icon: '☀️' },
+            { id: 'windturbine', name: 'Wind-Turbine', desc: 'Kinetische Energiegewinnung', baseCost: 500, cps: 5, icon: '💨' },
+            { id: 'geothermal', name: 'Geothermie-Bohrer', desc: 'Erdwärme-Extraktion', baseCost: 3000, cps: 25, icon: '🌋' },
+            { id: 'fusionreactor', name: 'Fusionsreaktor', desc: 'Kernfusion für massive Energie', baseCost: 10000, cps: 100, icon: '⚛️' },
+            { id: 'antimatter', name: 'Antimaterie-Generator', desc: 'Materie-Antimaterie-Annihilation', baseCost: 40000, cps: 400, icon: '💥' },
+            { id: 'quantumcore', name: 'Quanten-Kern', desc: 'Quantenverschränkung nutzen', baseCost: 200000, cps: 2000, icon: '🔮' },
+            { id: 'dysonswarm', name: 'Dyson-Schwarm', desc: 'Stellare Energiegewinnung', baseCost: 1000000, cps: 10000, icon: '🌟' },
+            { id: 'voidextractor', name: 'Void-Extraktor', desc: 'Energie aus dem Nichts', baseCost: 5000000, cps: 50000, icon: '🕳️' },
+            { id: 'timeloop', name: 'Zeitschleifen-Reaktor', desc: 'Temporale Energieduplikation', baseCost: 25000000, cps: 250000, icon: '⏰' },
+            { id: 'dimensionalrift', name: 'Dimensions-Riss', desc: 'Paralleluniversum-Anzapfung', baseCost: 100000000, cps: 1000000, icon: '🌌' },
+            { id: 'singularity', name: 'Singularitäts-Engine', desc: 'Schwarze-Loch-Energieextraktion', baseCost: 500000000, cps: 5000000, icon: '⚫' }
+        ];
+
+        const UPGRADES = [
+            { id: 'click1', name: 'Verbesserte Handschuhe', desc: '+1 Energie pro Klick', cost: 100, effect: 'click', value: 1, icon: '🧤' },
+            { id: 'click2', name: 'Nano-Verstärker', desc: '+5 Energie pro Klick', cost: 500, effect: 'click', value: 5, requires: 'click1', icon: '⚡' },
+            { id: 'click3', name: 'Quanten-Gauntlet', desc: '+25 Energie pro Klick', cost: 10000, effect: 'click', value: 25, requires: 'click2', icon: '👊' },
+            { id: 'click4', name: 'Dimension-Klicker', desc: '+100 Energie pro Klick', cost: 100000, effect: 'click', value: 100, requires: 'click3', icon: '💫' },
+            { id: 'nano1', name: 'Nano-Effizienz I', desc: 'Nano-Bots x2', cost: 1000, effect: 'building', building: 'nanobots', multiplier: 2, icon: '🔬' },
+            { id: 'nano2', name: 'Nano-Effizienz II', desc: 'Nano-Bots x2', cost: 5000, effect: 'building', building: 'nanobots', multiplier: 2, requires: 'nano1', icon: '🔬' },
+            { id: 'solar1', name: 'Solar-Optimierung', desc: 'Solar-Panels x2', cost: 10000, effect: 'building', building: 'solarpanel', multiplier: 2, icon: '🔆' },
+            { id: 'solar2', name: 'Hyper-Solar', desc: 'Solar-Panels x3', cost: 50000, effect: 'building', building: 'solarpanel', multiplier: 3, requires: 'solar1', icon: '☀️' },
+            { id: 'wind1', name: 'Aerodynamik-Boost', desc: 'Wind-Turbinen x2', cost: 25000, effect: 'building', building: 'windturbine', multiplier: 2, icon: '🌪️' },
+            { id: 'geo1', name: 'Tiefbohrung', desc: 'Geothermie x2', cost: 100000, effect: 'building', building: 'geothermal', multiplier: 2, icon: '⛏️' },
+            { id: 'fusion1', name: 'Fusionskatalysator', desc: 'Fusionsreaktoren x2', cost: 500000, effect: 'building', building: 'fusionreactor', multiplier: 2, icon: '🔥' },
+            { id: 'anti1', name: 'Antimaterie-Stabilisator', desc: 'AM-Generatoren x2', cost: 2000000, effect: 'building', building: 'antimatter', multiplier: 2, icon: '🧲' },
+            { id: 'global1', name: 'Effizienz-Protokoll Alpha', desc: 'Alle Produktion +10%', cost: 50000, effect: 'global', multiplier: 1.1, icon: '📊' },
+            { id: 'global2', name: 'Effizienz-Protokoll Beta', desc: 'Alle Produktion +15%', cost: 500000, effect: 'global', multiplier: 1.15, requires: 'global1', icon: '📈' },
+            { id: 'global3', name: 'Effizienz-Protokoll Gamma', desc: 'Alle Produktion +20%', cost: 5000000, effect: 'global', multiplier: 1.2, requires: 'global2', icon: '🚀' },
+            { id: 'global4', name: 'Singularitäts-Effizienz', desc: 'Alle Produktion +50%', cost: 50000000, effect: 'global', multiplier: 1.5, requires: 'global3', icon: '⭐' },
+            { id: 'bank1', name: 'Zins-Optimierung I', desc: 'Bank-Zinsen +1%', cost: 100000, effect: 'bank', value: 0.01, icon: '💰' },
+            { id: 'bank2', name: 'Zins-Optimierung II', desc: 'Bank-Zinsen +2%', cost: 1000000, effect: 'bank', value: 0.02, requires: 'bank1', icon: '💎' },
+            { id: 'stock1', name: 'Börsen-Insider', desc: 'Bessere Aktienkurse', cost: 500000, effect: 'stock', value: 1, icon: '📊' },
+            { id: 'auto1', name: 'Auto-Clicker Prototype', desc: '+1 automatischer Klick/s', cost: 1000000, effect: 'autoclick', value: 1, icon: '🤖' }
+        ];
+
+        const STOCKS_DATA = [
+            { id: 'lithium', name: 'Lithium-Corp', basePrice: 100, volatility: 0.15, color: '#3b82f6' },
+            { id: 'antimatter', name: 'AntimatterTech', basePrice: 500, volatility: 0.25, color: '#8b5cf6' },
+            { id: 'quantum', name: 'QuantumSys', basePrice: 1000, volatility: 0.20, color: '#06b6d4' },
+            { id: 'fusion', name: 'Fusion-Industries', basePrice: 2500, volatility: 0.18, color: '#f59e0b' },
+            { id: 'void', name: 'Void-Dynamics', basePrice: 5000, volatility: 0.30, color: '#ec4899' }
+        ];
+
+        let stockCharts = {};
+        let gameLoopInterval = null;
+
+        // Generate realistic initial stock history
+        function generateInitialStockHistory(basePrice, volatility, points = 30) {
+            const history = [];
+            let currentPrice = basePrice;
+            
+            for (let i = 0; i < points; i++) {
+                const change = (Math.random() - 0.5) * 2 * volatility;
+                currentPrice = Math.max(basePrice * 0.5, currentPrice * (1 + change));
+                history.push(currentPrice);
+            }
+            
+            return history;
+        }
+
+        function waitForChart() {
+            return new Promise((resolve) => {
+                if (typeof Chart !== 'undefined') {
+                    resolve();
+                } else {
+                    const checkInterval = setInterval(() => {
+                        if (typeof Chart !== 'undefined') {
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                }
+            });
+        }
+
+        async function init() {
+            if (isInitialized) return;
+            try {
+                console.log('🚀 Initializing game...');
+                
+                BUILDINGS.forEach(b => gameState.buildings[b.id] = 0);
+                
+                // Initialize stocks with realistic history
+                STOCKS_DATA.forEach(s => {
+                    const initialHistory = generateInitialStockHistory(s.basePrice, s.volatility);
+                    gameState.stocks[s.id] = initialHistory[initialHistory.length - 1];
+                    gameState.stockHistory[s.id] = initialHistory;
+                    gameState.portfolio[s.id] = 0;
+                });
+                
+                loadFromLocalStorage();
+                renderBuildings();
+                renderUpgrades();
+                updateDisplay();
+                
+                const powerCore = document.getElementById('powerCore');
+                if (powerCore) powerCore.addEventListener('click', handleClick);
+                
+                await waitForChart();
+                console.log('✅ Chart.js loaded!');
+                renderStocks();
+                
+                if (gameLoopInterval) clearInterval(gameLoopInterval);
+                gameLoopInterval = setInterval(gameLoop, 1000);
+                setInterval(saveToLocalStorage, 30000);
+                
+                isInitialized = true;
+                console.log('✅ Game initialized successfully!');
+            } catch (error) {
+                console.error('❌ Init error:', error);
+            }
+        }
+
+        function gameLoop() {
+            try {
+                const cps = calculateCPS();
+                gameState.energy += cps;
+                if (gameState.bankBalance > 0) {
+                    gameState.bankBalance += gameState.bankBalance * getBankInterestRate();
+                }
+                updateStockPrices();
+                updateDisplay();
+                renderBuildings();
+                renderUpgrades();
+            } catch (error) {
+                console.error('❌ Loop error:', error);
+            }
+        }
+
+        function handleClick(e) {
+            try {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const power = getClickPower();
+                gameState.energy += power;
+                gameState.totalClicks++;
+                showClickAnimation(x, y, power);
+                createParticles(x, y);
+                updateDisplay();
+            } catch (error) {
+                console.error('❌ Click error:', error);
+            }
+        }
+
+        function showClickAnimation(x, y, value) {
+            const container = document.getElementById('clickContainer');
+            if (!container) return;
+            const anim = document.createElement('div');
+            anim.className = 'click-animation';
+            anim.textContent = '+' + formatNumber(value);
+            anim.style.left = x + 'px';
+            anim.style.top = y + 'px';
+            container.appendChild(anim);
+            setTimeout(() => { if (anim.parentNode) anim.remove(); }, 1000);
+        }
+
+        function createParticles(x, y) {
+            const container = document.getElementById('clickContainer');
+            if (!container) return;
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                const angle = (i / 8) * Math.PI * 2;
+                const distance = 50 + Math.random() * 50;
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                particle.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                container.appendChild(particle);
+                setTimeout(() => { if (particle.parentNode) particle.remove(); }, 1000);
+            }
+        }
+
+        function calculateCPS() {
+            let cps = 0;
+            BUILDINGS.forEach(building => {
+                let buildingCPS = building.cps * (gameState.buildings[building.id] || 0);
+                UPGRADES.forEach(upgrade => {
+                    if (gameState.upgrades[upgrade.id] && upgrade.effect === 'building' && upgrade.building === building.id) {
+                        buildingCPS *= upgrade.multiplier;
+                    }
+                });
+                cps += buildingCPS;
+            });
+            UPGRADES.forEach(upgrade => {
+                if (gameState.upgrades[upgrade.id]) {
+                    if (upgrade.effect === 'global') cps *= upgrade.multiplier;
+                    if (upgrade.effect === 'autoclick') cps += upgrade.value * getClickPower();
+                }
+            });
+            return cps;
+        }
+
+        function getClickPower() {
+            let power = 1;
+            UPGRADES.forEach(upgrade => {
+                if (gameState.upgrades[upgrade.id] && upgrade.effect === 'click') power += upgrade.value;
+            });
+            return power;
+        }
+
+        function getBankInterestRate() {
+            let rate = 0.001;
+            UPGRADES.forEach(upgrade => {
+                if (gameState.upgrades[upgrade.id] && upgrade.effect === 'bank') rate += upgrade.value;
+            });
+            return rate;
+        }
+
+        function getBuildingCost(building) {
+            return Math.floor(building.baseCost * Math.pow(1.15, gameState.buildings[building.id] || 0));
+        }
+
+        function buyBuilding(buildingId) {
+            const building = BUILDINGS.find(b => b.id === buildingId);
+            if (!building) return;
+            const cost = getBuildingCost(building);
+            if (gameState.energy >= cost) {
+                gameState.energy -= cost;
+                gameState.buildings[building.id]++;
+                updateDisplay();
+                renderBuildings();
+            }
+        }
+
+        function buyUpgrade(upgradeId) {
+            const upgrade = UPGRADES.find(u => u.id === upgradeId);
+            if (!upgrade || gameState.upgrades[upgrade.id]) return;
+            if (upgrade.requires && !gameState.upgrades[upgrade.requires]) return;
+            if (gameState.energy >= upgrade.cost) {
+                gameState.energy -= upgrade.cost;
+                gameState.upgrades[upgrade.id] = true;
+                updateDisplay();
+                renderUpgrades();
+            }
+        }
+
+        function depositToBank() {
+            if (gameState.energy > 0) {
+                gameState.bankBalance += gameState.energy;
+                gameState.energy = 0;
+                updateDisplay();
+            }
+        }
+
+        function withdrawFromBank() {
+            if (gameState.bankBalance > 0) {
+                gameState.energy += gameState.bankBalance;
+                gameState.bankBalance = 0;
+                updateDisplay();
+            }
+        }
+
+        function buyStock(stockId, amount) {
+            const cost = gameState.stocks[stockId] * amount;
+            if (gameState.energy >= cost) {
+                gameState.energy -= cost;
+                gameState.portfolio[stockId] += amount;
+                updateDisplay();
+            }
+        }
+
+        function sellStock(stockId, amount) {
+            if ((gameState.portfolio[stockId] || 0) >= amount) {
+                gameState.energy += gameState.stocks[stockId] * amount;
+                gameState.portfolio[stockId] -= amount;
+                updateDisplay();
+            }
+        }
+
+        function updateStockPrices() {
+            STOCKS_DATA.forEach(stock => {
+                const currentPrice = gameState.stocks[stock.id];
+                const change = (Math.random() - 0.5) * 2 * stock.volatility;
+                const newPrice = Math.max(stock.basePrice * 0.3, currentPrice * (1 + change));
+                gameState.stocks[stock.id] = newPrice;
+                
+                const history = gameState.stockHistory[stock.id];
+                history.push(newPrice);
+                if (history.length > 30) history.shift();
+                
+                if (stockCharts[stock.id]) {
+                    try {
+                        const labels = history.map((_, i) => i);
+                        stockCharts[stock.id].data.labels = labels;
+                        stockCharts[stock.id].data.datasets[0].data = history;
+                        stockCharts[stock.id].update('none');
+                    } catch (e) {}
+                }
+            });
+        }
+
+        function updateDisplay() {
+            const updates = {
+                energyDisplay: formatNumber(gameState.energy) + ' J',
+                cpsDisplay: formatNumber(calculateCPS()),
+                clickPowerDisplay: getClickPower(),
+                totalClicksDisplay: formatNumber(gameState.totalClicks),
+                bankBalanceDisplay: formatNumber(gameState.bankBalance) + ' J',
+                interestRateDisplay: (getBankInterestRate() * 100).toFixed(2) + '%/s'
+            };
+            Object.entries(updates).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value;
+            });
+        }
+
+        function renderBuildings() {
+            const container = document.getElementById('buildingsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            BUILDINGS.forEach(building => {
+                const count = gameState.buildings[building.id] || 0;
+                const cost = getBuildingCost(building);
+                const canBuy = gameState.energy >= cost;
+                const card = document.createElement('button');
+                card.className = 'list-item ' + (canBuy ? 'list-item-available' : 'list-item-disabled disabled');
+                card.onclick = () => buyBuilding(building.id);
+                card.disabled = !canBuy;
+                card.innerHTML = `
+                    <div class="item-content">
+                        <span class="item-icon">${building.icon}</span>
+                        <div class="item-info">
+                            <div class="item-name">${building.name}</div>
+                            <div class="item-desc">${building.desc}</div>
+                            <div class="item-stats">${formatNumber(building.cps)} J/s each</div>
+                        </div>
+                        <div class="item-cost">
+                            <div class="cost-value">${formatNumber(cost)} J</div>
+                            <div class="cost-label">Owned: ${count}</div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderUpgrades() {
+            const container = document.getElementById('upgradesContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            UPGRADES.forEach(upgrade => {
+                const owned = gameState.upgrades[upgrade.id];
+                const canBuy = !owned && gameState.energy >= upgrade.cost && (!upgrade.requires || gameState.upgrades[upgrade.requires]);
+                const card = document.createElement('button');
+                card.className = 'list-item list-item-upgrade ' + (owned ? 'list-item-owned' : canBuy ? 'list-item-available' : 'list-item-disabled disabled');
+                card.onclick = () => buyUpgrade(upgrade.id);
+                card.disabled = owned || !canBuy;
+                card.innerHTML = `
+                    <div class="item-content">
+                        <span class="item-icon">${upgrade.icon}</span>
+                        <div class="item-info">
+                            <div class="item-name">${upgrade.name}</div>
+                            <div class="item-desc">${upgrade.desc}</div>
+                        </div>
+                        <div class="item-cost">
+                            ${owned ? '<span style="color: #10b981; font-weight: bold;">✓ OWNED</span>' : '<div class="cost-value" style="color: #a855f7;">' + formatNumber(upgrade.cost) + ' J</div>'}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderStocks() {
+            const container = document.getElementById('stocksContainer');
+            if (!container || typeof Chart === 'undefined') {
+                console.error('❌ Cannot render stocks');
+                return;
+            }
+            
+            console.log('📊 Rendering stocks with charts...');
+            container.innerHTML = '';
+            
+            STOCKS_DATA.forEach(stock => {
+                const price = gameState.stocks[stock.id];
+                const owned = gameState.portfolio[stock.id] || 0;
+                const history = gameState.stockHistory[stock.id];
+                const trend = history.length > 1 ? history[history.length - 1] - history[history.length - 2] : 0;
+                
+                const card = document.createElement('div');
+                card.className = 'stock-card';
+                card.innerHTML = `
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-name">${stock.name}</div>
+                            <div class="stock-owned">📊 Portfolio: ${owned} shares</div>
+                        </div>
+                        <div>
+                            <div class="stock-price" style="color: ${stock.color}">${formatNumber(price)} J</div>
+                            <div class="stock-trend ${trend > 0 ? 'trend-up' : 'trend-down'}">${trend > 0 ? '↑' : '↓'} ${Math.abs(trend).toFixed(2)} J</div>
+                        </div>
+                    </div>
+                    <div class="stock-chart">
+                        <canvas id="chart-${stock.id}"></canvas>
+                    </div>
+                    <div class="stock-buttons">
+                        <button onclick="buyStock('${stock.id}', 1)" class="btn btn-success">Buy 1</button>
+                        <button onclick="sellStock('${stock.id}', 1)" ${owned < 1 ? 'disabled' : ''} class="btn btn-danger">Sell 1</button>
+                        <button onclick="buyStock('${stock.id}', 10)" class="btn btn-success">Buy 10</button>
+                        <button onclick="sellStock('${stock.id}', ${owned})" ${owned < 1 ? 'disabled' : ''} class="btn btn-danger">Sell All</button>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+            
+            setTimeout(() => {
+                STOCKS_DATA.forEach(stock => {
+                    try {
+                        const canvas = document.getElementById('chart-' + stock.id);
+                        if (!canvas) {
+                            console.error('❌ Canvas not found for', stock.id);
+                            return;
+                        }
+                        
+                        const ctx = canvas.getContext('2d');
+                        const history = gameState.stockHistory[stock.id];
+                        const labels = history.map((_, i) => i);
+                        
+                        if (stockCharts[stock.id]) {
+                            stockCharts[stock.id].destroy();
+                        }
+                        
+                        stockCharts[stock.id] = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: history,
+                                    borderColor: stock.color,
+                                    backgroundColor: stock.color + '10',
+                                    borderWidth: 2.5,
+                                    fill: true,
+                                    tension: 0.3,
+                                    pointRadius: 0,
+                                    pointHoverRadius: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { 
+                                    legend: { display: false },
+                                    tooltip: { enabled: false }
+                                },
+                                scales: { 
+                                    x: { 
+                                        display: false,
+                                        grid: { display: false }
+                                    },
+                                    y: { 
+                                        display: false,
+                                        grid: { display: false }
+                                    }
+                                },
+                                animation: { duration: 0 },
+                                interaction: { mode: 'index', intersect: false }
+                            }
+                        });
+                        
+                        console.log('✅ Chart created:', stock.id, '- Data points:', history.length);
+                    } catch (e) {
+                        console.error('❌ Chart error for', stock.id, ':', e);
+                    }
+                });
+            }, 300);
+        }
+
+        function switchTab(tab) {
+            document.getElementById('buildingsContainer').classList.toggle('hidden', tab !== 'buildings');
+            document.getElementById('upgradesContainer').classList.toggle('hidden', tab !== 'upgrades');
+            document.getElementById('buildingsTab').className = 'btn tab ' + (tab === 'buildings' ? 'btn-primary' : 'btn-secondary');
+            document.getElementById('upgradesTab').className = 'btn tab ' + (tab === 'upgrades' ? 'btn-primary' : 'btn-secondary');
+        }
+
+        function formatNumber(num) {
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'G';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+            return Math.floor(num).toString();
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('nexusMinerSave', JSON.stringify(gameState));
+            } catch (e) {
+                console.log('LocalStorage not available');
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('nexusMinerSave');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    Object.assign(gameState, data);
+                    console.log('✅ Save loaded!');
+                }
+            } catch (e) {
+                console.log('No save found');
+            }
+        }
+
+        function exportSave() {
+            try {
+                const code = btoa(JSON.stringify(gameState));
+                document.getElementById('saveCode').value = code;
+                document.getElementById('saveCode').select();
+                try {
+                    document.execCommand('copy');
+                    alert('✅ Spielstand exportiert und in die Zwischenablage kopiert!');
+                } catch (e) {
+                    alert('✅ Spielstand exportiert! Bitte manuell kopieren (Strg+C).');
+                }
+            } catch (e) {
+                alert('❌ Export fehlgeschlagen!');
+            }
+        }
+
+        function importSave() {
+            try {
+                const code = document.getElementById('saveCode').value.trim();
+                if (!code) {
+                    alert('❌ Bitte Code eingeben!');
+                    return;
+                }
+                const data = JSON.parse(atob(code));
+                Object.assign(gameState, data);
+                saveToLocalStorage();
+                alert('✅ Spielstand geladen! Seite wird neu geladen...');
+                setTimeout(() => location.reload(), 500);
+            } catch (e) {
+                alert('❌ Ungültiger Code! Bitte überprüfe den Code und versuche es erneut.');
+            }
+        }
+
+        function hardReset() {
+            if (confirm('⚠️ WARNUNG!\n\nDies wird ALLE deine Fortschritte löschen!\n\nBist du absolut sicher?')) {
+                if (confirm('Letzte Chance! Wirklich alles löschen?')) {
+                    localStorage.removeItem('nexusMinerSave');
+                    alert('✅ Spiel wurde zurückgesetzt!');
+                    setTimeout(() => location.reload(), 500);
+                }
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
